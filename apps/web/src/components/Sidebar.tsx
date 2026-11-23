@@ -125,6 +125,12 @@ import {
 } from "../sidebarProjectGrouping";
 import { resolveProjectExpanded, useUiStateStore } from "../uiStateStore";
 import {
+  isEnvironmentNotificationsMuted,
+  planEnvironmentNotificationMuteToggle,
+  planSidebarEnvironmentVisibilityChange,
+  resolveEffectiveExcludedEnvironmentIds,
+} from "../teamEnvironmentPreferences";
+import {
   getThreadKeysToDeselectAfterDelete,
   useThreadSelectionStore,
 } from "../threadSelectionStore";
@@ -946,14 +952,61 @@ function readRouteThreadKey(router: AnyRouter): string | null {
 export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
   const gt = useGT();
   const messages = useMessages();
+  const primaryEnvironmentId = usePrimaryEnvironmentId();
+  const allEnvironments = useEnvironmentIdentities();
   const persistedExcludedEnvironmentIds = useUiStateStore(
     (state) => state.sidebarExcludedEnvironmentIds,
   );
-  const setExcludedEnvironmentIds = useUiStateStore(
-    (state) => state.setSidebarExcludedEnvironmentIds,
+  const hideNewRemoteEnvironments = useUiStateStore(
+    (state) => state.sidebarHideNewRemoteEnvironments,
   );
-  const excludedEnvironmentIds = new Set(
-    persistedExcludedEnvironmentIds.map((id) => EnvironmentId.make(id)),
+  const includedRemoteEnvironmentIds = useUiStateStore(
+    (state) => state.sidebarIncludedRemoteEnvironmentIds,
+  );
+  const setSidebarEnvironmentVisibility = useUiStateStore(
+    (state) => state.setSidebarEnvironmentVisibility,
+  );
+  const setHideNewRemoteEnvironments = useUiStateStore(
+    (state) => state.setSidebarHideNewRemoteEnvironments,
+  );
+  const muteRemoteNotifications = useUiStateStore(
+    (state) => state.muteRemoteEnvironmentNotifications,
+  );
+  const mutedEnvironmentIdsList = useUiStateStore((state) => state.mutedEnvironmentIds);
+  const unmutedRemoteEnvironmentIdsList = useUiStateStore(
+    (state) => state.unmutedRemoteEnvironmentIds,
+  );
+  const setMuteRemoteNotifications = useUiStateStore(
+    (state) => state.setMuteRemoteEnvironmentNotifications,
+  );
+  const setEnvironmentNotificationMuteLists = useUiStateStore(
+    (state) => state.setEnvironmentNotificationMuteLists,
+  );
+  const sidebarEnvPrefs = {
+    sidebarExcludedEnvironmentIds: persistedExcludedEnvironmentIds,
+    sidebarHideNewRemoteEnvironments: hideNewRemoteEnvironments,
+    sidebarIncludedRemoteEnvironmentIds: includedRemoteEnvironmentIds,
+  };
+  const excludedEnvironmentIds = resolveEffectiveExcludedEnvironmentIds({
+    environmentIds: allEnvironments.map((environment) => environment.environmentId),
+    primaryEnvironmentId,
+    preferences: sidebarEnvPrefs,
+  });
+  const notificationMutePrefs = {
+    muteRemoteEnvironmentNotifications: muteRemoteNotifications,
+    mutedEnvironmentIds: mutedEnvironmentIdsList,
+    unmutedRemoteEnvironmentIds: unmutedRemoteEnvironmentIdsList,
+  };
+  const effectiveMutedEnvironmentIds = new Set<EnvironmentId>(
+    allEnvironments
+      .filter((environment) =>
+        isEnvironmentNotificationsMuted({
+          environmentId: environment.environmentId,
+          primaryEnvironmentId,
+          preferences: notificationMutePrefs,
+        }),
+      )
+      .map((environment) => environment.environmentId),
   );
   const {
     projects,
@@ -1045,7 +1098,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const newThreadContext = useHandleNewThread();
   // Row callbacks capture only the handler; the rest of the context changes with the route.
   const { handleNewThread } = newThreadContext;
-  const primaryEnvironmentId = usePrimaryEnvironmentId();
   const clearSelection = useThreadSelectionStore((s) => s.clearSelection);
   const setSelectionAnchor = useThreadSelectionStore((s) => s.setAnchor);
   const toggleThreadSelection = useThreadSelectionStore((s) => s.toggleThread);
@@ -1251,7 +1303,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const scopedProjectKeys = revealWidensScope ? null : chosenScopeProjectKeys;
   const changeEnvironmentFilter = (excludedIds: ReadonlySet<EnvironmentId>) => {
     clearSelection();
-    setExcludedEnvironmentIds([...excludedIds]);
+    setSidebarEnvironmentVisibility(
+      planSidebarEnvironmentVisibilityChange({
+        environmentIds: environments.map((environment) => environment.environmentId),
+        primaryEnvironmentId,
+        nextExcludedIds: excludedIds,
+        currentPreferences: sidebarEnvPrefs,
+      }),
+    );
     setSearchHighlightKey(null);
     const visibleScopeKeys = filterSidebarProjectScopeKeysByEnvironment({
       groups: projectGroups,
@@ -1264,6 +1323,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (visibleScopeKeys.length !== persistedProjectScopeKeys.length) {
       setPersistedProjectScopeKeys(visibleScopeKeys);
     }
+  };
+  const toggleEnvironmentNotificationMute = (environmentId: EnvironmentId) => {
+    setEnvironmentNotificationMuteLists(
+      planEnvironmentNotificationMuteToggle({
+        environmentId,
+        primaryEnvironmentId,
+        currentPreferences: notificationMutePrefs,
+      }),
+    );
   };
   const threadSearch = useThreadSearch(
     searchEnvironmentIds,
@@ -3422,6 +3490,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                         machineByEnvironmentId={environmentMachineById}
                         primaryEnvironmentId={primaryEnvironmentId}
                         onChange={changeEnvironmentFilter}
+                        hideNewRemoteEnvironments={hideNewRemoteEnvironments}
+                        onHideNewRemoteEnvironmentsChange={setHideNewRemoteEnvironments}
+                        mutedEnvironmentIds={effectiveMutedEnvironmentIds}
+                        onToggleEnvironmentMute={toggleEnvironmentNotificationMute}
+                        muteRemoteNotifications={muteRemoteNotifications}
+                        onMuteRemoteNotificationsChange={setMuteRemoteNotifications}
                       />
                     ) : null}
                   </ComboboxPopup>

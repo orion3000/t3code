@@ -50,6 +50,7 @@ import { ConnectDeviceApprovalSettings } from "./ConnectDeviceApprovalSettings";
 import { EnvironmentIconMenu } from "./EnvironmentIconPicker";
 import { FoldedSettingsSection } from "./FoldedSettingsSection";
 import { EnvironmentsMap } from "./EnvironmentsMap";
+import { FleetStatusPanel } from "./FleetStatusPanel";
 import { LinkedEnvironmentsSettings } from "./LinkedEnvironmentsSettings";
 import { addEnvironmentPrefillAtom } from "~/state/linkedThreadView";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
@@ -1873,6 +1874,10 @@ function ConnectionsSettingsContent({
           </div>
         }
       >
+        <FleetStatusPanel
+          environments={savedEnvironments}
+          primaryEnvironmentId={primaryEnvironmentId}
+        />
         {environmentsView === "map" ? (
           <EnvironmentsMap
             footerId={searchableSetting("linked-environments").id}

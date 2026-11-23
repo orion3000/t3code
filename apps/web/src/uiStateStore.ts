@@ -31,6 +31,11 @@ export interface PersistedUiState {
   sidebarProjectScopeKey?: string | null;
   sidebarProjectScopeKeys?: string[];
   sidebarExcludedEnvironmentIds?: string[];
+  sidebarHideNewRemoteEnvironments?: boolean;
+  sidebarIncludedRemoteEnvironmentIds?: string[];
+  muteRemoteEnvironmentNotifications?: boolean;
+  mutedEnvironmentIds?: string[];
+  unmutedRemoteEnvironmentIds?: string[];
   threadChangedFilesExpansionVersion?: number;
   threadChangedFilesExpandedById?: Record<string, Record<string, boolean>>;
   pullRequestMergeMethod?: string;
@@ -41,6 +46,11 @@ export interface UiProjectState {
   projectOrder: string[];
   sidebarProjectScopeKeys: string[];
   sidebarExcludedEnvironmentIds: string[];
+  sidebarHideNewRemoteEnvironments: boolean;
+  sidebarIncludedRemoteEnvironmentIds: string[];
+  muteRemoteEnvironmentNotifications: boolean;
+  mutedEnvironmentIds: string[];
+  unmutedRemoteEnvironmentIds: string[];
 }
 
 export interface UiThreadState {
@@ -64,6 +74,11 @@ const initialState: UiState = {
   projectOrder: [],
   sidebarProjectScopeKeys: [],
   sidebarExcludedEnvironmentIds: [],
+  sidebarHideNewRemoteEnvironments: true,
+  sidebarIncludedRemoteEnvironmentIds: [],
+  muteRemoteEnvironmentNotifications: true,
+  mutedEnvironmentIds: [],
+  unmutedRemoteEnvironmentIds: [],
   threadLastVisitedAtById: {},
   threadChangedFilesExpandedById: {},
   defaultAdvertisedEndpointKey: null,
@@ -160,6 +175,21 @@ export function parsePersistedState(parsed: PersistedUiState): UiState {
     sidebarExcludedEnvironmentIds: sanitizeStringArray(parsed.sidebarExcludedEnvironmentIds).filter(
       isEnvironmentId,
     ),
+    sidebarHideNewRemoteEnvironments:
+      typeof parsed.sidebarHideNewRemoteEnvironments === "boolean"
+        ? parsed.sidebarHideNewRemoteEnvironments
+        : initialState.sidebarHideNewRemoteEnvironments,
+    sidebarIncludedRemoteEnvironmentIds: sanitizeStringArray(
+      parsed.sidebarIncludedRemoteEnvironmentIds,
+    ).filter(isEnvironmentId),
+    muteRemoteEnvironmentNotifications:
+      typeof parsed.muteRemoteEnvironmentNotifications === "boolean"
+        ? parsed.muteRemoteEnvironmentNotifications
+        : initialState.muteRemoteEnvironmentNotifications,
+    mutedEnvironmentIds: sanitizeStringArray(parsed.mutedEnvironmentIds).filter(isEnvironmentId),
+    unmutedRemoteEnvironmentIds: sanitizeStringArray(parsed.unmutedRemoteEnvironmentIds).filter(
+      isEnvironmentId,
+    ),
     pullRequestMergeMethod: isPullRequestMergeMethod(parsed.pullRequestMergeMethod)
       ? parsed.pullRequestMergeMethod
       : initialState.pullRequestMergeMethod,
@@ -230,6 +260,11 @@ export function persistState(state: UiState): void {
         defaultAdvertisedEndpointKey: state.defaultAdvertisedEndpointKey,
         sidebarProjectScopeKeys: state.sidebarProjectScopeKeys,
         sidebarExcludedEnvironmentIds: state.sidebarExcludedEnvironmentIds,
+        sidebarHideNewRemoteEnvironments: state.sidebarHideNewRemoteEnvironments,
+        sidebarIncludedRemoteEnvironmentIds: state.sidebarIncludedRemoteEnvironmentIds,
+        muteRemoteEnvironmentNotifications: state.muteRemoteEnvironmentNotifications,
+        mutedEnvironmentIds: state.mutedEnvironmentIds,
+        unmutedRemoteEnvironmentIds: state.unmutedRemoteEnvironmentIds,
         // Older clients read only this field.
         sidebarProjectScopeKey:
           state.sidebarProjectScopeKeys.length === 1
@@ -437,6 +472,16 @@ interface UiStateStore extends UiState {
   setDefaultAdvertisedEndpointKey: (key: string | null) => void;
   setSidebarProjectScopeKeys: (projectKeys: readonly string[]) => void;
   setSidebarExcludedEnvironmentIds: (environmentIds: readonly string[]) => void;
+  setSidebarEnvironmentVisibility: (input: {
+    readonly sidebarExcludedEnvironmentIds: readonly string[];
+    readonly sidebarIncludedRemoteEnvironmentIds: readonly string[];
+  }) => void;
+  setSidebarHideNewRemoteEnvironments: (hide: boolean) => void;
+  setMuteRemoteEnvironmentNotifications: (mute: boolean) => void;
+  setEnvironmentNotificationMuteLists: (input: {
+    readonly mutedEnvironmentIds: readonly string[];
+    readonly unmutedRemoteEnvironmentIds: readonly string[];
+  }) => void;
   setPullRequestMergeMethod: (method: PullRequestMergeMethod) => void;
   setProjectExpanded: (projectIds: string | readonly string[], expanded: boolean) => void;
   reorderProjects: (
@@ -461,6 +506,25 @@ export const useUiStateStore = create<UiStateStore>((set) => ({
   setSidebarExcludedEnvironmentIds: (environmentIds) =>
     set({
       sidebarExcludedEnvironmentIds: sanitizeStringArray(environmentIds).filter(isEnvironmentId),
+    }),
+  setSidebarEnvironmentVisibility: (input) =>
+    set({
+      sidebarExcludedEnvironmentIds: sanitizeStringArray(
+        input.sidebarExcludedEnvironmentIds,
+      ).filter(isEnvironmentId),
+      sidebarIncludedRemoteEnvironmentIds: sanitizeStringArray(
+        input.sidebarIncludedRemoteEnvironmentIds,
+      ).filter(isEnvironmentId),
+    }),
+  setSidebarHideNewRemoteEnvironments: (hide) => set({ sidebarHideNewRemoteEnvironments: hide }),
+  setMuteRemoteEnvironmentNotifications: (mute) =>
+    set({ muteRemoteEnvironmentNotifications: mute }),
+  setEnvironmentNotificationMuteLists: (input) =>
+    set({
+      mutedEnvironmentIds: sanitizeStringArray(input.mutedEnvironmentIds).filter(isEnvironmentId),
+      unmutedRemoteEnvironmentIds: sanitizeStringArray(input.unmutedRemoteEnvironmentIds).filter(
+        isEnvironmentId,
+      ),
     }),
   setPullRequestMergeMethod: (method) => set((state) => setPullRequestMergeMethod(state, method)),
   setProjectExpanded: (projectIds, expanded) =>

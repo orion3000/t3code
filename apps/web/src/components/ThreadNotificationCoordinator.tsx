@@ -23,8 +23,11 @@ import {
 import { getClientSettings, subscribeClientSettings } from "../hooks/useSettings";
 import { isWindowsPlatform } from "../lib/utils";
 import { environmentSummaries } from "../state/presentation";
+import { primaryEnvironmentIdAtom } from "../state/primaryEnvironment";
 import { environmentShell } from "../state/shell";
 import { environmentThreadShells } from "../state/threads";
+import { isEnvironmentNotificationsMuted } from "../teamEnvironmentPreferences";
+import { useUiStateStore } from "../uiStateStore";
 import {
   hasDesktopNotifications,
   hasNotificationSound,
@@ -130,11 +133,30 @@ export function startThreadNotifications(
     setNotificationBadge(0);
   };
 
+  const isEnvironmentMuted = (environmentId: EnvironmentId) =>
+    isEnvironmentNotificationsMuted({
+      environmentId,
+      primaryEnvironmentId: registry.get(primaryEnvironmentIdAtom),
+      preferences: useUiStateStore.getState(),
+    });
+
+  const closeMutedPending = () => {
+    closeToasts((key) => isEnvironmentMuted(parseThreadKey(key).environmentId));
+    const count = pending.size;
+    for (const [tag, entry] of pending) {
+      if (!isEnvironmentMuted(entry.environmentId)) continue;
+      entry.notification.close();
+      pending.delete(tag);
+    }
+    if (count !== pending.size) setNotificationBadge(pending.size);
+  };
+
   const present = (
     environmentId: EnvironmentId,
     state: NotificationState,
     kind: ThreadNotificationKind,
   ) => {
+    if (isEnvironmentMuted(environmentId)) return;
     const { thread, status } = state;
     if (
       registry
@@ -439,6 +461,8 @@ export function startThreadNotifications(
     registry.subscribe(environmentThreadShells.anyEnvironmentHidingAtom, closeHiddenPending),
     registry.subscribe(environmentThreadShells.threadRefsAtom, closeHiddenPending),
   ];
+  const unsubscribeUiState = useUiStateStore.subscribe(closeMutedPending);
+  const unsubscribePrimary = registry.subscribe(primaryEnvironmentIdAtom, closeMutedPending);
   const unsubscribeRoute = router.subscribe("onResolved", closeOpenedThreadToasts);
   onSettings();
 
@@ -446,6 +470,8 @@ export function startThreadNotifications(
     unsubscribeSettings();
     unsubscribeEnvironmentIds();
     for (const unsubscribe of unsubscribeHidden) unsubscribe();
+    unsubscribeUiState();
+    unsubscribePrimary();
     unsubscribeRoute();
     for (const entry of watched.values()) entry.unsubscribe();
     watched.clear();

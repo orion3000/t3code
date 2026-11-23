@@ -21,6 +21,11 @@ function makeUiState(overrides: Partial<UiState> = {}): UiState {
     projectOrder: [],
     sidebarProjectScopeKeys: [],
     sidebarExcludedEnvironmentIds: [],
+    sidebarHideNewRemoteEnvironments: true,
+    sidebarIncludedRemoteEnvironmentIds: [],
+    muteRemoteEnvironmentNotifications: true,
+    mutedEnvironmentIds: [],
+    unmutedRemoteEnvironmentIds: [],
     threadLastVisitedAtById: {},
     threadChangedFilesExpandedById: {},
     defaultAdvertisedEndpointKey: null,
@@ -137,6 +142,11 @@ describe("parsePersistedState", () => {
       defaultAdvertisedEndpointKey: "desktop-core:lan:http",
       sidebarProjectScopeKeys: [],
       sidebarExcludedEnvironmentIds: ["studio", "offline-host"],
+      sidebarHideNewRemoteEnvironments: true,
+      sidebarIncludedRemoteEnvironmentIds: [],
+      muteRemoteEnvironmentNotifications: true,
+      mutedEnvironmentIds: [],
+      unmutedRemoteEnvironmentIds: [],
       pullRequestMergeMethod: "merge",
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -250,6 +260,11 @@ describe("uiStateStore persistence", () => {
       sidebarProjectScopeKeys: [],
       sidebarProjectScopeKey: null,
       sidebarExcludedEnvironmentIds: [],
+      sidebarHideNewRemoteEnvironments: true,
+      sidebarIncludedRemoteEnvironmentIds: [],
+      muteRemoteEnvironmentNotifications: true,
+      mutedEnvironmentIds: [],
+      unmutedRemoteEnvironmentIds: [],
       threadChangedFilesExpansionVersion: 2,
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
