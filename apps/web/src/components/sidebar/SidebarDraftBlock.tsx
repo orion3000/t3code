@@ -215,6 +215,7 @@ export function useSidebarDrafts(
   scopedProjectKeys: ReadonlySet<string> | null,
   routeDraftId: string | null,
   terminalLabels: ReadonlyMap<string, string>,
+  excludedEnvironmentIds?: ReadonlySet<EnvironmentId>,
 ): { draftIds: readonly DraftId[]; routeDraftComposer: ComposerThreadDraftState | null } {
   const [frozenRoute, setFrozenRoute] = useState<{
     routeDraftId: string | null;
@@ -230,6 +231,7 @@ export function useSidebarDrafts(
       const listed: [string, DraftSessionState][] = [];
       for (const [draftKey, session] of Object.entries(store.draftThreadsByThreadKey)) {
         if (session.promotedTo != null) continue;
+        if (excludedEnvironmentIds?.has(session.environmentId)) continue;
         if (
           scopedProjectKeys !== null &&
           !scopedProjectKeys.has(`${session.environmentId}:${session.projectId}`)

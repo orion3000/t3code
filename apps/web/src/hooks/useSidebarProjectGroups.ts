@@ -11,7 +11,7 @@ import { useDelegatedUnderParent, useProjects, useQuietThreadShells } from "../s
 import { legacyProjectCwdPreferenceKey, useUiStateStore } from "../uiStateStore";
 import { useClientSettings } from "./useSettings";
 
-export function useSidebarProjectGroups() {
+export function useSidebarProjectGroups(excludedEnvironmentIds?: ReadonlySet<string>) {
   const projects = useProjects();
   // Activity order lags a running thread's streaming ticks until its next
   // real change; reading every tick re-rendered the whole sidebar with it.
@@ -45,5 +45,11 @@ export function useSidebarProjectGroups() {
     },
     resolve,
   );
-  return sortSidebarV2ProjectGroups(unsortedGroups, threads, sortOrder, delegatedUnderParent);
+  return sortSidebarV2ProjectGroups(
+    unsortedGroups,
+    threads,
+    sortOrder,
+    delegatedUnderParent,
+    excludedEnvironmentIds,
+  );
 }
